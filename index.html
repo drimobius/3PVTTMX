@@ -3,112 +3,594 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>KTMEX Poka-Yoke V4.9 iOS Fix</title>
+<title>KTMEX | Poka-Yoke System</title>
 <script src="https://cdn.jsdelivr.net/npm/tesseract.js@4/dist/tesseract.min.js"></script>
-<script src="https://unpkg.com/@zxing/library@latest"></script>
 <style>
-        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; margin: 0; background: #000; color: white; overflow: hidden; }
-        video { width: 100%; height: 40%; object-fit: cover; background: #111; display: block; }
-        .panel { position: fixed; bottom: 0; width: 100%; height: 60%; background: white; color: #333; border-radius: 25px 25px 0 0; padding: 20px; box-sizing: border-box; overflow-y: auto; }
-        .btn-main { background: #1a1c2c; color: white; border: none; padding: 15px; width: 100%; border-radius: 10px; font-weight: bold; font-size: 16px; margin-top: 10px; cursor: pointer; -webkit-tap-highlight-color: transparent; }
-        .btn-flash { position: absolute; top: 10px; right: 10px; background: rgba(0,0,0,0.6); color: white; border: 1px solid white; padding: 12px; border-radius: 50%; z-index: 100; font-size: 20px; }
-        #res-val { font-size: 24px; font-weight: 800; color: #e30613; text-align: center; border: 2px dashed #e30613; margin: 10px 0; padding: 10px; background: #fff5f5; border-radius: 10px; min-height: 40px; word-break: break-all; }
-        .img-verify { width: 100%; height: 160px; object-fit: contain; background: #f0f0f0; border-radius: 12px; display: none; margin-bottom: 10px; border: 1px solid #ddd; }
-        .option-btn { background: #f8f9fa; border: 2px solid #dee2e6; color: #333; padding: 15px; width: 100%; border-radius: 8px; margin-bottom: 10px; text-align: center; font-weight: bold; cursor: pointer; font-size: 18px; }
-        .lock-ui { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: #e30613; z-index: 5000; display: none; flex-direction: column; align-items: center; justify-content: center; padding: 20px; text-align: center; }
-        input { width: 85%; padding: 15px; border-radius: 8px; border: 1px solid #ccc; font-size: 18px; text-align: center; margin-bottom: 10px; }
-        #retry-counter { font-size: 13px; color: #666; text-align: center; margin-top: 5px; font-weight: bold; }
-        #msg-pop { color: #e30613; font-weight: bold; text-align: center; display: none; margin-top: 10px; background: #ffebeb; padding: 8px; border-radius: 5px; }
+    :root {
+        --bg-main: #202124;
+        --bg-panel: #18191c;
+        --bg-input: #111215;
+        --border-color: #2e3036;
+        --blue-primary: #2997ff;
+        --blue-btn: #3898ec;
+        --red-btn: #e64937;
+        --amber-focus: #f59e0b;
+        --purple-admin: #722ed1;
+        --green-ok: #10b981;
+        --text-main: #ffffff;
+        --text-muted: #8b949e;
+    }
+
+    * {
+        box-sizing: border-box;
+        -webkit-tap-highlight-color: transparent;
+    }
+
+    body {
+        margin: 0;
+        padding: 0;
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+        background-color: var(--bg-main);
+        color: var(--text-main);
+        height: 100vh;
+        width: 100vw;
+        overflow: hidden;
+        display: flex;
+        flex-direction: column;
+    }
+
+    /* HEADER ESTILO KTMEX SUITE */
+    .app-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 12px 16px;
+        background-color: var(--bg-main);
+        border-bottom: 1px solid var(--border-color);
+        flex-shrink: 0;
+    }
+
+    .app-title {
+        font-size: 20px;
+        font-weight: 800;
+        color: var(--blue-primary);
+        letter-spacing: -0.3px;
+        margin: 0;
+    }
+
+    .badge-top {
+        background-color: var(--purple-admin);
+        color: #ffffff;
+        border: none;
+        padding: 7px 12px;
+        border-radius: 6px;
+        font-size: 11px;
+        font-weight: 700;
+        text-transform: uppercase;
+        cursor: pointer;
+        letter-spacing: 0.4px;
+    }
+
+    /* CONTENEDOR PRINCIPAL */
+    .workspace {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        justify-content: space-between;
+        padding: 12px 16px 14px 16px;
+        overflow-y: auto;
+    }
+
+    .field-group {
+        margin-bottom: 10px;
+    }
+
+    .field-label {
+        display: flex;
+        justify-content: space-between;
+        font-size: 11px;
+        font-weight: 600;
+        color: var(--text-muted);
+        text-transform: uppercase;
+        margin-bottom: 5px;
+        letter-spacing: 0.4px;
+    }
+
+    .input-box {
+        width: 100%;
+        background-color: var(--bg-input);
+        border: 1.5px solid var(--border-color);
+        border-radius: 6px;
+        padding: 12px;
+        color: var(--text-main);
+        font-size: 16px;
+        font-weight: 700;
+        outline: none;
+        transition: border-color 0.15s ease;
+    }
+
+    input.input-box {
+        user-select: text;
+        -webkit-user-select: text;
+    }
+
+    .input-box:focus, .input-box.active-laser {
+        border-color: var(--blue-primary);
+        box-shadow: 0 0 0 1px var(--blue-primary);
+    }
+
+    .input-box.active-ocr {
+        border-color: var(--amber-focus);
+        box-shadow: 0 0 0 1px var(--amber-focus);
+    }
+
+    .input-box.valid-step {
+        border-color: var(--green-ok);
+        color: var(--green-ok);
+    }
+
+    .grid-2 {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 10px;
+    }
+
+    /* BANNER DE PASO ACTUAL */
+    .step-banner {
+        background-color: var(--bg-input);
+        border-left: 4px solid var(--blue-primary);
+        padding: 8px 12px;
+        border-radius: 4px;
+        margin-bottom: 10px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+
+    .step-banner-title {
+        font-size: 13px;
+        font-weight: 800;
+        color: var(--text-main);
+        text-transform: uppercase;
+    }
+
+    .step-banner-mode {
+        font-size: 10px;
+        font-weight: 700;
+        padding: 3px 7px;
+        border-radius: 4px;
+        background: #2b2d33;
+        color: var(--amber-focus);
+        text-transform: uppercase;
+    }
+
+    /* VISOR DE CÁMARA OCR (EXCLUSIVO PASO 3) */
+    #ocr-viewport {
+        display: none;
+        position: relative;
+        width: 100%;
+        height: 140px;
+        background: #000;
+        border-radius: 8px;
+        overflow: hidden;
+        border: 1.5px solid var(--amber-focus);
+        margin-bottom: 10px;
+    }
+
+    #webcam {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        display: block;
+    }
+
+    .ocr-reticle {
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        width: 65%;
+        height: 52px;
+        border: 2px solid var(--blue-primary);
+        border-radius: 6px;
+        box-shadow: 0 0 0 9999px rgba(0, 0, 0, 0.55);
+        pointer-events: none;
+        display: flex;
+        align-items: flex-end;
+        justify-content: center;
+    }
+
+    .ocr-reticle span {
+        font-size: 9px;
+        background: rgba(0, 0, 0, 0.8);
+        color: #fff;
+        padding: 1px 6px;
+        border-radius: 3px;
+        margin-bottom: -16px;
+        letter-spacing: 0.5px;
+    }
+
+    .btn-flash-mini {
+        position: absolute;
+        top: 6px;
+        right: 6px;
+        background: rgba(17, 18, 21, 0.85);
+        color: #fff;
+        border: 1px solid var(--border-color);
+        border-radius: 4px;
+        padding: 5px 10px;
+        font-size: 11px;
+        font-weight: 700;
+        z-index: 10;
+        cursor: pointer;
+    }
+
+    .ocr-raw-live {
+        position: absolute;
+        top: 6px;
+        left: 6px;
+        background: rgba(17, 18, 21, 0.85);
+        color: var(--amber-focus);
+        padding: 4px 8px;
+        border-radius: 4px;
+        font-size: 11px;
+        font-family: monospace;
+        font-weight: 700;
+        z-index: 10;
+    }
+
+    /* PASO 4: VERIFICACIÓN TEKIN */
+    #step4-container {
+        display: none;
+        flex-direction: column;
+        gap: 8px;
+        margin-bottom: 8px;
+    }
+
+    .img-verify {
+        width: 100%;
+        height: 125px;
+        object-fit: contain;
+        background: var(--bg-input);
+        border-radius: 6px;
+        border: 1px solid var(--border-color);
+        display: none;
+    }
+
+    .tekin-options {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 10px;
+    }
+
+    .option-btn {
+        background: var(--bg-input);
+        border: 1.5px solid var(--blue-primary);
+        color: var(--text-main);
+        padding: 14px 8px;
+        border-radius: 6px;
+        font-weight: 800;
+        font-size: 15px;
+        cursor: pointer;
+        text-transform: uppercase;
+    }
+
+    .option-btn:active {
+        background: var(--blue-primary);
+    }
+
+    /* BOTONES INFERIORES */
+    .bottom-actions {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 10px;
+        margin-top: auto;
+        padding-top: 6px;
+    }
+
+    .btn-suite {
+        border: none;
+        border-radius: 6px;
+        padding: 14px 10px;
+        font-size: 13px;
+        font-weight: 800;
+        color: #ffffff;
+        text-transform: uppercase;
+        cursor: pointer;
+        text-align: center;
+        letter-spacing: 0.4px;
+    }
+
+    .btn-suite:disabled {
+        opacity: 0.6;
+    }
+
+    .btn-blue { background-color: var(--blue-btn); }
+    .btn-red { background-color: var(--red-btn); }
+    .btn-green { background-color: var(--green-ok); }
+    .btn-purple { background-color: var(--purple-admin); }
+    .btn-full { grid-column: span 2; }
+
+    #msg-pop {
+        display: none;
+        background: rgba(230, 73, 55, 0.18);
+        border: 1px solid var(--red-btn);
+        color: #ff8070;
+        padding: 8px 10px;
+        border-radius: 6px;
+        font-size: 12px;
+        font-weight: 700;
+        text-align: center;
+        margin-bottom: 8px;
+    }
+
+    /* PANTALLA DE BLOQUEO DE SEGURIDAD */
+    .lock-ui {
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        width: 100%;
+        height: 100%;
+        background: #140808;
+        border: 4px solid var(--red-btn);
+        z-index: 8000;
+        display: none;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        padding: 20px;
+        text-align: center;
+    }
+
+    .lock-title {
+        color: var(--red-btn);
+        font-size: 22px;
+        font-weight: 900;
+        margin: 0 0 8px 0;
+        text-transform: uppercase;
+    }
 </style>
 </head>
 <body>
- 
-<button class="btn-flash" onclick="toggleFlash()">🔦</button>
-<video id="webcam" autoplay playsinline webkit-playsinline muted></video>
- 
-<div class="panel">
-<div id="ui-login">
-<h2 style="color:#e30613; margin-top:0;">Acceso KTMEX</h2>
-<input type="text" id="nom-input" placeholder="Nómina">
-<div id="pin-box" style="display:none;"><input type="password" id="pin-input" placeholder="PIN Líder"></div>
-<button class="btn-main" onclick="checkLogin()">INGRESAR</button>
+
+<!-- HEADER PRINCIPAL -->
+<div class="app-header">
+    <h1 class="app-title">KTMEX | Poka-Yoke</h1>
+    <button id="header-badge" class="badge-top" type="button">TECLADO: AUTO</button>
 </div>
- 
-    <div id="ui-scan" style="display:none;">
-<div style="display:flex; justify-content: space-between; align-items: center;">
-<h3 id="step-txt" style="margin:0; color:#1a1c2c;">PASO 1: JAMAITA</h3>
-<span id="user-display" style="font-size:10px; color:#999;"></span>
+
+<!-- CONTENEDOR PRINCIPAL -->
+<div class="workspace">
+
+    <!-- VISTA 1: LOGIN -->
+    <div id="ui-login" style="display:flex; flex-direction:column; justify-content:center; flex:1;">
+        <div class="field-group">
+            <div class="field-label">
+                <span>NÓMINA DE OPERADOR</span>
+                <span id="sync-status" style="color:var(--amber-focus);">SINCRONIZANDO BD...</span>
+            </div>
+            <input type="text" id="nom-input" class="input-box active-laser" placeholder="ESCRIBIR O ESCANEAR NÓMINA" autocomplete="off">
+        </div>
+
+        <div id="pin-box" class="field-group" style="display:none;">
+            <div class="field-label"><span>PIN DE LÍDER</span></div>
+            <input type="password" id="pin-input" class="input-box" placeholder="INGRESAR PIN DE LÍDER" autocomplete="off">
+        </div>
+
+        <div id="login-msg" style="color:var(--red-btn); font-size:12px; font-weight:700; text-align:center; min-height:20px; margin-bottom:8px;"></div>
+
+        <button id="btn-login" type="button" class="btn-suite btn-blue" style="width:100%;">INGRESAR</button>
+    </div>
+
+    <!-- VISTA 2: FLUJO DE ESCANEO (4 PASOS) -->
+    <div id="ui-scan" style="display:none; flex-direction:column; height:100%; justify-content:space-between;">
+        <div>
+            <div class="step-banner">
+                <span id="step-txt" class="step-banner-title">PASO 1: JAMAITA (SEBANGO)</span>
+                <span id="step-mode" class="step-banner-mode">LÁSER SUPERIOR</span>
+            </div>
+
+            <!-- Receptor del escáner láser Zebra para Pasos 1 y 2 -->
+            <input type="text" id="zebra-wedge-input" inputmode="none" autocomplete="off"
+                   style="position:fixed; top:-100px; left:-100px; opacity:0; height:1px; width:1px;">
+
+            <div class="grid-2">
+                <div class="field-group">
+                    <div class="field-label">
+                        <span>SEBANGO / JAMAITA</span>
+                        <span id="user-display" style="color:var(--blue-primary);"></span>
+                    </div>
+                    <div id="box-step1" class="input-box active-laser">---</div>
+                </div>
+
+                <div class="field-group">
+                    <div class="field-label">
+                        <span>KANBAN (# PARTE)</span>
+                        <span id="retry-counter" style="color:var(--amber-focus);">ERR: 0/5</span>
+                    </div>
+                    <div id="box-step2" class="input-box">---</div>
+                </div>
+            </div>
+
+            <div class="field-group">
+                <div class="field-label">
+                    <span>ID CLIENTE (CLAVE MXXX)</span>
+                    <span id="expected-hint" style="color:var(--text-muted);"></span>
+                </div>
+                <div id="box-step3" class="input-box">---</div>
+            </div>
+
+            <div id="msg-pop"></div>
+
+            <!-- VISOR DE CÁMARA (SOLO ACTIVO EN PASO 3 PARA OCR) -->
+            <div id="ocr-viewport">
+                <div id="ocr-live-read" class="ocr-raw-live">OCR: ENFOCANDO...</div>
+                <button id="btn-flash" type="button" class="btn-flash-mini">LUZ</button>
+                <video id="webcam" autoplay playsinline webkit-playsinline muted></video>
+                <div class="ocr-reticle">
+                    <span>ENFOCAR CLAVE MXXX</span>
+                </div>
+            </div>
+
+            <!-- CONTENEDOR PASO 4: VERIFICACIÓN VISUAL TEKIN -->
+            <div id="step4-container">
+                <div class="field-label"><span>VERIFICACIÓN VISUAL DE TEKIN</span></div>
+                <img id="img-tekin" class="img-verify" alt="Referencia Tekin">
+                <div id="options-area" class="tekin-options"></div>
+            </div>
+        </div>
+
+        <!-- BOTONES DE CONTROL -->
+        <div class="bottom-actions" id="controls-standard">
+            <button id="btn-res" type="button" class="btn-suite btn-green btn-full" style="display:none;">CONTINUAR AL SIGUIENTE PASO</button>
+            <button id="btn-retry" type="button" class="btn-suite btn-blue">REPETIR ESCANEO</button>
+            <button id="btn-train" type="button" class="btn-suite btn-purple" style="display:none;">ENTRENAR OCR</button>
+            <button id="btn-reset" type="button" class="btn-suite btn-red">REINICIAR</button>
+        </div>
+
+        <div class="bottom-actions" id="controls-finish" style="display:none;">
+            <button id="btn-finish" type="button" class="btn-suite btn-green btn-full">FINALIZAR PIEZA</button>
+        </div>
+    </div>
 </div>
-<div id="res-val">---</div>
-<div id="msg-pop"></div>
- 
-        <div id="step4-container" style="display:none;">
-<p style="font-weight:bold; font-size:14px; margin-bottom:5px;">Verificación Visual de Tekin:</p>
-<img id="img-tekin" class="img-verify">
-<div id="options-area" style="display: flex; flex-direction: column;"></div>
-</div>
- 
-        <div id="controls-standard">
-<button id="btn-res" class="btn-main" style="display:none; background:#27ae60;" onclick="goNext()">CONTINUAR</button>
-<button id="btn-retry" class="btn-main" style="background:#f39c12;" onclick="handleRetry()">🔄 REPETIR ESCANEO</button>
-<div id="retry-counter">Intentos de error: 0/5</div>
-</div>
- 
-        <button id="btn-finish" class="btn-main" style="display:none; background:#27ae60;" onclick="resetToStepOne()">✅ FINALIZAR PIEZA</button>
-</div>
-</div>
- 
+
+<!-- BLOQUEO DE SEGURIDAD -->
 <div id="lock" class="lock-ui">
-<h1 style="font-size:50px; margin:0;">🛑</h1>
-<h2 id="lock-msg">BLOQUEO DE SEGURIDAD</h2>
-<p>Exceso de errores o reintentos. Requiere PIN de Líder.</p>
-<input type="password" id="pin-tl" placeholder="PIN LÍDER">
-<button class="btn-main" style="background:white; color:#e30613; width:85%;" onclick="unlock()">DESBLOQUEAR</button>
+    <h2 class="lock-title">BLOQUEO DE SEGURIDAD</h2>
+    <p id="lock-msg" style="color:var(--text-main); font-weight:700; font-size:14px; margin:0 0 6px 0;">EXCESO DE INTENTOS</p>
+    <p style="color:var(--text-muted); font-size:12px; margin:0 0 16px 0;">Requiere autorización con PIN de Líder.</p>
+    <div class="field-group" style="width:100%; max-width:280px;">
+        <input type="password" id="pin-tl" class="input-box" style="text-align:center;" placeholder="PIN DE LÍDER">
+    </div>
+    <button id="btn-unlock" type="button" class="btn-suite btn-red" style="width:100%; max-width:280px; margin-top:8px;">DESBLOQUEAR</button>
 </div>
- 
+
 <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-app.js";
-    import { getFirestore, doc, getDoc, collection, addDoc, serverTimestamp, query, where, getDocs } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-firestore.js";
- 
+    import {
+        initializeFirestore,
+        doc,
+        getDoc,
+        setDoc,
+        collection,
+        addDoc,
+        serverTimestamp,
+        query,
+        where,
+        getDocs
+    } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-firestore.js";
+
     const firebaseConfig = {
         apiKey: "AIzaSyA6Il03GHS4L_eDY1Kv3fMyF2EwuYLQ5qY",
         authDomain: "logistica-ktmex.firebaseapp.com",
+        databaseURL: "https://logistica-ktmex-default-rtdb.firebaseio.com",
         projectId: "logistica-ktmex",
         storageBucket: "logistica-ktmex.firebasestorage.app",
         messagingSenderId: "166597623735",
-        appId: "1:166597623735:web:c0f8d372bc1ee12d81b232"
+        appId: "1:166597623735:web:3eace2ff8efec0f081b232",
+        measurementId: "G-4YYT138NFR"
     };
- 
+
     const app = initializeApp(firebaseConfig);
-    const db = getFirestore(app);
- 
-    const SHEET_CSV_URL = "https://docs.google.com/spreadsheets/d/1GkWY2r-kz_wfv_-LPEeFEdKe1qNILTV86pln2xg_rIM/gviz/tq?tqx=out:csv%22;
- 
-    let user = null; 
-    let step = 1; 
-    let jamaita = ""; 
-    let kanbanParte = ""; 
-    let idCliente = ""; 
-    let paused = false; 
-    let track = null;
-    let t_ok = ""; 
-    let retryCount = 0; 
-    let pendingData = null;
-    let codeReader = null;
-    let selectedDeviceId = null;
+    // LongPolling automático evita bloqueos de conexión en redes industriales y terminales Zebra
+    const db = initializeFirestore(app, { experimentalAutoDetectLongPolling: true });
+
+    const SHEET_CSV_URL = "https://docs.google.com/spreadsheets/d/1GkWY2r-kz_wfv_-LPEeFEdKe1qNILTV86pln2xg_rIM/gviz/tq?tqx=out:csv";
+
+    // Lista oficial de claves MXXX a reconocer y entrenar en el Paso 3
+    const BASE_M_CODES = new Set([
+        "M452","M300","M976","M776","M270","M561","M012","M387","M250","M971",
+        "M051","M124","M279","M981","M342","M463","M556","M645","M788","M837",
+        "M047","M942","M163","M783","M258","M677","M339","M534","M440","M069",
+        "M926","M153","M885","M201","M755","M362","M690","M411","M590","M991",
+        "M093","M849","M105","M790","M204","M682","M369","M585","M472","M043",
+        "M895","M140","M456","M626","M888","M375","M504","M096","M674","M948",
+        "M549","M172","M474","M719","M145","M484","M016","M382","M021","M808",
+        "M246","M744","M351","M563","M101","M831","M076","M997","M057","M530",
+        "M229","M641","M912","M226","M492","M128","M672","M813","M372","M699",
+        "M168","M568","M213","M726","M039","M183","M575","M239","M967","M748",
+        "M112","M865"
+    ]);
+
+    // Caché en memoria
     let sheetData = [];
+    let usersCache = {};
+    let maestroCache = {};
+    let ocrTrainingMap = {};
+    let learnedThresholds = [125, 105, 145];
+    let thresholdIdx = 0;
+
+    // Variables de flujo
+    let user = null;
+    let step = 1;
+    let jamaita = "";
+    let kanbanParte = "";
+    let idCliente = "";
+    let expectedIdCliente = "";
+    let pendingData = null;
+    let retryCount = 0;
+    let paused = false;
+    let manualKeyboard = false;
+
+    // Variables exclusivas de Cámara y OCR (Paso 3)
+    let ocrWorker = null;
     let ocrTimer = null;
- 
+    let isOcrBusy = false;
+    let videoStream = null;
+    let videoTrack = null;
+    let lastRawOcrToken = "";
+    const roiCanvas = document.createElement('canvas');
+    roiCanvas.width = 260;
+    roiCanvas.height = 80;
+    const roiCtx = roiCanvas.getContext('2d', { willReadFrequently: true });
+
+    // =========================================================================
+    // 1. PRECARGA ASÍNCRONA EN SEGUNDO PLANO (NO BLOQUEA EL LOGIN)
+    // =========================================================================
+    async function initBackgroundResources() {
+        try {
+            const localSheet = localStorage.getItem('ktmex_sheet');
+            if (localSheet) sheetData = JSON.parse(localSheet);
+            const localUsers = localStorage.getItem('ktmex_users');
+            if (localUsers) usersCache = JSON.parse(localUsers);
+            const localOcr = localStorage.getItem('ktmex_ocr_map');
+            if (localOcr) ocrTrainingMap = JSON.parse(localOcr);
+        } catch (e) {}
+
+        // 1. Descargar CSV de Google Sheets
+        loadSheetData().then(() => {
+            const syncEl = document.getElementById('sync-status');
+            if (syncEl) {
+                syncEl.innerText = "BD LISTA";
+                syncEl.style.color = "var(--green-ok)";
+            }
+        });
+
+        // 2. Precargar Usuarios y Diccionario OCR desde Firestore
+        preloadFirestoreData();
+
+        // 3. Inicializar Worker de Tesseract en segundo plano para cuando llegue al Paso 3
+        initLightweightOCR();
+    }
+
     async function loadSheetData() {
         try {
             const response = await fetch(SHEET_CSV_URL);
             const data = await response.text();
             sheetData = parseCSV(data);
+            try { localStorage.setItem('ktmex_sheet', JSON.stringify(sheetData)); } catch (e) {}
+
+            sheetData.forEach(row => {
+                const code = row[8] ? row[8].trim().toUpperCase() : "";
+                if (/^M\d{3,8}$/.test(code)) BASE_M_CODES.add(code);
+            });
         } catch (e) {
-            console.error(e);
+            console.error("Error al descargar Google Sheet:", e);
         }
     }
- 
+
     function parseCSV(text) {
         const lines = text.split(/\r\n|\n/);
         return lines.map(line => {
@@ -130,205 +612,431 @@
             return result;
         });
     }
- 
-    window.toggleFlash = async () => {
-        if (!track) return;
+
+    async function preloadFirestoreData() {
         try {
-            const caps = track.getCapabilities();
-            if (caps.torch) {
-                const s = track.getSettings();
-                await track.applyConstraints({ advanced: [{ torch: !s.torch }] });
+            const uSnap = await getDocs(collection(db, "Usuarios"));
+            uSnap.forEach(d => {
+                usersCache[d.id.trim()] = d.data();
+            });
+            try { localStorage.setItem('ktmex_users', JSON.stringify(usersCache)); } catch (e) {}
+        } catch (e) {}
+
+        try {
+            const ocrSnap = await getDocs(collection(db, "OCR_Aprendizaje"));
+            ocrSnap.forEach(d => {
+                const data = d.data();
+                if (data.raw && data.target) {
+                    ocrTrainingMap[data.raw.toUpperCase()] = data.target.toUpperCase();
+                }
+            });
+            try { localStorage.setItem('ktmex_ocr_map', JSON.stringify(ocrTrainingMap)); } catch (e) {}
+        } catch (e) {}
+    }
+
+    async function initLightweightOCR() {
+        try {
+            if (!window.Tesseract) return;
+            ocrWorker = await Tesseract.createWorker();
+            await ocrWorker.loadLanguage('eng');
+            await ocrWorker.initialize('eng');
+            await ocrWorker.setParameters({
+                tessedit_char_whitelist: 'M0123456789OISBZGHAENWQDTL',
+                tessedit_pageseg_mode: '7'
+            });
+        } catch (e) {
+            console.warn("Usando Tesseract.recognize directo como respaldo:", e);
+            ocrWorker = null;
+        }
+    }
+
+    // =========================================================================
+    // 2. LOGIN CORREGIDO Y ROBUSTO
+    // =========================================================================
+    async function checkLogin() {
+        const nomInput = document.getElementById('nom-input');
+        const pinInput = document.getElementById('pin-input');
+        const msgEl = document.getElementById('login-msg');
+        const btnLogin = document.getElementById('btn-login');
+
+        const nom = nomInput.value.trim();
+        const pin = pinInput.value.trim();
+        msgEl.innerText = "";
+
+        if (!nom) {
+            msgEl.innerText = "Ingrese o escanee un número de nómina.";
+            nomInput.focus();
+            return;
+        }
+
+        btnLogin.disabled = true;
+        btnLogin.innerText = "VALIDANDO...";
+
+        let u = usersCache[nom];
+
+        // Consultar directamente en Firestore como en el código original
+        if (!u) {
+            try {
+                const s = await getDoc(doc(db, "Usuarios", nom));
+                if (s.exists()) {
+                    u = s.data();
+                    usersCache[nom] = u;
+                }
+            } catch (err) {
+                console.error("Error consultando Firestore:", err);
+                msgEl.innerText = "Error de red al validar usuario. Verifique conexión.";
+                btnLogin.disabled = false;
+                btnLogin.innerText = "INGRESAR";
+                return;
             }
-        } catch(e) {}
-    };
- 
-    window.checkLogin = async () => {
-        const nom = document.getElementById('nom-input').value;
-        const pin = document.getElementById('pin-input').value;
-        const s = await getDoc(doc(db, "Usuarios", nom));
-        if(!s.exists()) return;
-        const u = s.data();
-        if(u.nivel === "Operador") start(u);
-        else {
-            document.getElementById('pin-box').style.display = 'block';
-            if(pin === u.pin) start(u);
         }
-    };
- 
-    async function start(u) {
-        user = u;
-        document.getElementById('user-display').innerText = u.nombre;
-        document.getElementById('ui-login').style.display = 'none';
-        document.getElementById('ui-scan').style.display = 'block';
-        await loadSheetData();
- 
-        codeReader = new ZXing.BrowserMultiFormatReader();
- 
-        try {
-            const videoInputDevices = await codeReader.listVideoInputDevices();
-            const backCamera = videoInputDevices.find(device => 
-                device.label.toLowerCase().includes('back') || 
-                device.label.toLowerCase().includes('trasera') || 
-                device.label.toLowerCase().includes('environment')
-            );
- 
-            selectedDeviceId = backCamera ? backCamera.deviceId : videoInputDevices[0]?.deviceId;
- 
-            startScanner();
-        } catch(err) {
-            alert("No se pudo obtener la lista de cámaras o autorizar permisos en Safari.");
+
+        btnLogin.disabled = false;
+        btnLogin.innerText = "INGRESAR";
+
+        if (!u) {
+            msgEl.innerText = `La nómina "${nom}" no existe en la base de Usuarios.`;
+            return;
         }
-    }
- 
-    async function logToDB(status, msg = "") {
-        await addDoc(collection(db, "Bitacora_Incidencias"), {
-            usuario: user.nombre, status, customer_id: jamaita || "N/A", error_msg: msg, timestamp: serverTimestamp()
-        });
-    }
- 
-    window.handleRetry = () => {
-        retryCount++;
-        updateRetryUI();
-        if (retryCount >= 5) {
-            triggerLock("EXCESO DE REINTENTOS");
+
+        const nivelNorm = String(u.nivel || "").trim().toLowerCase();
+
+        if (nivelNorm === "operador") {
+            startSession(u);
         } else {
-            resumeScanning();
+            const pinBox = document.getElementById('pin-box');
+            if (pinBox.style.display === 'none') {
+                pinBox.style.display = 'block';
+                msgEl.style.color = "var(--amber-focus)";
+                msgEl.innerText = "Usuario Líder: Ingrese su PIN y presione INGRESAR.";
+                pinInput.focus();
+                return;
+            }
+
+            if (String(pin).trim() === String(u.pin || "").trim() && pin !== "") {
+                msgEl.style.color = "var(--red-btn)";
+                startSession(u);
+            } else {
+                msgEl.style.color = "var(--red-btn)";
+                msgEl.innerText = "PIN de Líder incorrecto.";
+                pinInput.focus();
+            }
         }
-    };
- 
-    function updateRetryUI() {
-        document.getElementById('retry-counter').innerText = `Intentos de error: ${retryCount}/5`;
     }
- 
-    function showStatusMsg(txt) {
-        const el = document.getElementById('msg-pop');
-        el.innerText = txt;
-        el.style.display = 'block';
-        setTimeout(() => { el.style.display = 'none'; }, 2000);
-    }
- 
-    function stopScanner() {
-        if (codeReader) {
-            try { codeReader.reset(); } catch(e) {}
+
+    async function startSession(u) {
+        user = u;
+        document.getElementById('user-display').innerText = u.nombre || "Operador";
+        document.getElementById('ui-login').style.display = 'none';
+        document.getElementById('ui-scan').style.display = 'flex';
+
+        if (sheetData.length === 0) {
+            await loadSheetData();
         }
+        resetToStepOne();
+    }
+
+    // =========================================================================
+    // 3. ESCÁNER LÁSER SUPERIOR ZEBRA (EXCLUSIVO PASOS 1 Y 2)
+    // =========================================================================
+    let keyBuffer = "";
+    let keyTimer = null;
+
+    function focusHardwareScanner() {
+        if (!user) return;
+        if (step === 1 || step === 2) {
+            const wedge = document.getElementById('zebra-wedge-input');
+            wedge.setAttribute('inputmode', manualKeyboard ? 'text' : 'none');
+            wedge.focus();
+        }
+    }
+
+    function toggleManualKeyboard() {
+        manualKeyboard = !manualKeyboard;
+        const badge = document.getElementById('header-badge');
+        badge.innerText = manualKeyboard ? "TECLADO: MANUAL" : "TECLADO: AUTO";
+        badge.style.backgroundColor = manualKeyboard ? "var(--amber-focus)" : "var(--purple-admin)";
+        focusHardwareScanner();
+    }
+
+    // Captura en el input receptor para DataWedge (Pasos 1 y 2)
+    const wedgeInput = document.getElementById('zebra-wedge-input');
+    wedgeInput.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter' || e.keyCode === 13 || e.keyCode === 9) {
+            e.preventDefault();
+            const val = wedgeInput.value.trim();
+            wedgeInput.value = "";
+            if (val && !paused && (step === 1 || step === 2)) {
+                processFound(val);
+            }
+        }
+    });
+
+    // Captura global para ráfagas del láser Zebra en Pasos 1 y 2
+    window.addEventListener('keydown', (e) => {
+        const activeId = document.activeElement ? document.activeElement.id : "";
+
+        if (!user) {
+            if (e.key === 'Enter' && (activeId === 'nom-input' || activeId === 'pin-input')) {
+                e.preventDefault();
+                checkLogin();
+            }
+            return;
+        }
+
+        if (activeId === 'pin-tl') {
+            if (e.key === 'Enter') unlock();
+            return;
+        }
+
+        // Si el paso ya fue validado y el operador dispara Enter otra vez, avanzar al siguiente paso
+        if (paused && (e.key === 'Enter' || e.keyCode === 13) && document.getElementById('btn-res').style.display === 'block') {
+            e.preventDefault();
+            goNext();
+            return;
+        }
+
+        if (paused || (step !== 1 && step !== 2) || activeId === 'zebra-wedge-input') return;
+
+        if (e.key === 'Enter' || e.keyCode === 13) {
+            if (keyBuffer.trim().length > 0) {
+                const scanned = keyBuffer.trim();
+                keyBuffer = "";
+                processFound(scanned);
+            }
+        } else if (e.key.length === 1) {
+            keyBuffer += e.key;
+            clearTimeout(keyTimer);
+            keyTimer = setTimeout(() => { keyBuffer = ""; }, 400);
+        }
+    });
+
+    document.addEventListener('click', (e) => {
+        if (user && (step === 1 || step === 2) && e.target.tagName !== 'BUTTON' && e.target.tagName !== 'INPUT') {
+            focusHardwareScanner();
+        }
+    });
+
+    // =========================================================================
+    // 4. OCR ULTRALIGERO Y AUTO-ENTRENAMIENTO EN FIREBASE (EXCLUSIVO PASO 3)
+    // =========================================================================
+    async function startCameraOCR() {
+        stopCameraOCR();
+        document.getElementById('ocr-viewport').style.display = 'block';
+        document.getElementById('btn-train').style.display = 'block';
+
+        try {
+            videoStream = await navigator.mediaDevices.getUserMedia({
+                video: {
+                    facingMode: { ideal: "environment" },
+                    width: { ideal: 1280 },
+                    height: { ideal: 720 }
+                },
+                audio: false
+            });
+            const videoElem = document.getElementById('webcam');
+            videoTrack = videoStream.getVideoTracks()[0];
+            videoElem.srcObject = videoStream;
+            await videoElem.play();
+
+            ocrTimer = setInterval(runUltraLightOCR, 300);
+        } catch (err) {
+            showStatusMsg("No se pudo iniciar la cámara trasera para el Paso 3.");
+        }
+    }
+
+    function stopCameraOCR() {
         if (ocrTimer) {
             clearInterval(ocrTimer);
             ocrTimer = null;
         }
+        if (videoStream) {
+            videoStream.getTracks().forEach(t => t.stop());
+            videoStream = null;
+            videoTrack = null;
+        }
+        document.getElementById('ocr-viewport').style.display = 'none';
+        document.getElementById('btn-train').style.display = 'none';
     }
- 
-    function resumeScanning() {
-        paused = false;
-        document.getElementById('btn-res').style.display = 'none';
-        document.getElementById('res-val').innerText = "---";
-        startScanner();
+
+    async function toggleFlash() {
+        if (!videoTrack) return;
+        try {
+            const caps = videoTrack.getCapabilities();
+            if (caps.torch) {
+                const s = videoTrack.getSettings();
+                await videoTrack.applyConstraints({ advanced: [{ torch: !s.torch }] });
+            }
+        } catch (e) {}
     }
- 
-    function startScanner() {
-        stopScanner();
-        paused = false;
- 
-        if (step === 1 || step === 2) {
-            codeReader.decodeFromVideoDevice(selectedDeviceId, 'webcam', (result, err) => {
-                if (result && !paused) {
-                    processFound(result.getText());
-                }
-            }).catch(err => console.error(err));
-        } else if (step === 3) {
-            navigator.mediaDevices.getUserMedia({
-                video: { deviceId: selectedDeviceId ? { exact: selectedDeviceId } : undefined, facingMode: "environment" }
-            }).then(stream => {
-                const videoElem = document.getElementById('webcam');
-                track = stream.getVideoTracks()[0];
-                videoElem.srcObject = stream;
-                videoElem.play();
-                ocrTimer = setInterval(runOCR, 1000);
-            });
+
+    function normalizeOcrCandidate(rawToken) {
+        const clean = rawToken.replace(/[^A-Z0-9]/g, '').toUpperCase();
+        if (clean.length < 4) return null;
+
+        if (ocrTrainingMap[clean]) {
+            return ocrTrainingMap[clean];
+        }
+
+        const sub = clean.substring(0, 4);
+        if (!['M', 'N', 'H', 'W'].includes(sub[0])) return null;
+
+        const digitMap = {
+            'O': '0', 'Q': '0', 'D': '0',
+            'I': '1', 'L': '1',
+            'Z': '2',
+            'E': '3',
+            'A': '4',
+            'S': '5',
+            'G': '6',
+            'T': '7',
+            'B': '8'
+        };
+
+        let digits = "";
+        for (let i = 1; i < sub.length; i++) {
+            const ch = sub[i];
+            digits += (digitMap[ch] !== undefined) ? digitMap[ch] : ch;
+        }
+
+        const candidate = 'M' + digits;
+        return /^M\d{3}$/.test(candidate) ? candidate : null;
+    }
+
+    function saveOcrLearningToFirebase(rawStr, validTargetCode, usedThreshold) {
+        const cleanRaw = rawStr.replace(/[^A-Z0-9]/g, '').toUpperCase();
+        if (!cleanRaw || cleanRaw === validTargetCode) return;
+        if (ocrTrainingMap[cleanRaw] === validTargetCode) return;
+
+        ocrTrainingMap[cleanRaw] = validTargetCode;
+        try { localStorage.setItem('ktmex_ocr_map', JSON.stringify(ocrTrainingMap)); } catch (e) {}
+
+        setDoc(doc(db, "OCR_Aprendizaje", cleanRaw), {
+            raw: cleanRaw,
+            target: validTargetCode,
+            threshold: usedThreshold,
+            usuario: user ? user.nombre : "Operador",
+            timestamp: serverTimestamp()
+        }).catch(() => {});
+    }
+
+    function trainCurrentOCR() {
+        if (step !== 3 || !expectedIdCliente) return;
+        if (lastRawOcrToken && lastRawOcrToken.length >= 3) {
+            saveOcrLearningToFirebase(lastRawOcrToken, expectedIdCliente, learnedThresholds[thresholdIdx]);
+            showStatusMsg(`Patrón "${lastRawOcrToken}" guardado como ${expectedIdCliente}`);
+            processFound(expectedIdCliente);
+        } else {
+            showStatusMsg("Enfoque la clave MXXX dentro del recuadro azul.");
         }
     }
- 
-    async function runOCR() {
-        if (paused || step !== 3) return;
+
+    async function runUltraLightOCR() {
+        if (paused || step !== 3 || isOcrBusy) return;
         const videoElem = document.getElementById('webcam');
         if (!videoElem.videoWidth) return;
- 
+
+        isOcrBusy = true;
         try {
-            const c = document.createElement('canvas');
-            const scale = 640 / videoElem.videoWidth;
-            c.width = 640;
-            c.height = videoElem.videoHeight * scale;
-            const ctx = c.getContext('2d');
-            ctx.drawImage(videoElem, 0, 0, c.width, c.height);
- 
-            const imgData = ctx.getImageData(0, 0, c.width, c.height);
+            const vw = videoElem.videoWidth;
+            const vh = videoElem.videoHeight;
+            const cropW = vw * 0.60;
+            const cropH = vh * 0.28;
+            const cropX = (vw - cropW) / 2;
+            const cropY = (vh - cropH) / 2;
+
+            roiCtx.drawImage(videoElem, cropX, cropY, cropW, cropH, 0, 0, roiCanvas.width, roiCanvas.height);
+
+            const imgData = roiCtx.getImageData(0, 0, roiCanvas.width, roiCanvas.height);
             const data = imgData.data;
-            const threshold = 120;
- 
+            const currentThreshold = learnedThresholds[thresholdIdx];
+            thresholdIdx = (thresholdIdx + 1) % learnedThresholds.length;
+
             for (let i = 0; i < data.length; i += 4) {
-                const avg = (data[i] + data[i + 1] + data[i + 2]) / 3;
-                const color = avg < threshold ? 0 : 255;
-                data[i] = color;
-                data[i + 1] = color;
-                data[i + 2] = color;
+                const lum = (data[i] + data[i + 1] + data[i + 2]) / 3;
+                const bin = lum < currentThreshold ? 0 : 255;
+                data[i] = bin;
+                data[i + 1] = bin;
+                data[i + 2] = bin;
             }
-            ctx.putImageData(imgData, 0, 0);
- 
-            const { data: { text } } = await Tesseract.recognize(c, 'eng', {
-                tessedit_char_whitelist: 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789',
-                tessedit_pageseg_mode: '6'
-            });
- 
-            const raw = text.toUpperCase().split(/[\s\n]+/);
-            let fm = null;
-            for (let w of raw) {
-                const p = w.replace(/[^A-Z0-9]/g, '');
-                if (p.match(/^M\d{3,8}$/)) {
-                    fm = p;
-                    break;
+            roiCtx.putImageData(imgData, 0, 0);
+
+            let recognizedText = "";
+            if (ocrWorker) {
+                const res = await ocrWorker.recognize(roiCanvas);
+                recognizedText = res.data.text;
+            } else {
+                const res = await Tesseract.recognize(roiCanvas, 'eng', {
+                    tessedit_char_whitelist: 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789',
+                    tessedit_pageseg_mode: '7'
+                });
+                recognizedText = res.data.text;
+            }
+
+            const tokens = recognizedText.toUpperCase().split(/[\s\n]+/);
+            for (let w of tokens) {
+                const cleaned = w.replace(/[^A-Z0-9]/g, '');
+                if (cleaned.length >= 3) {
+                    lastRawOcrToken = cleaned;
+                    document.getElementById('ocr-live-read').innerText = `OCR: ${cleaned}`;
                 }
-            }
- 
-            if (fm && !paused) {
-                processFound(fm);
+
+                const candidate = normalizeOcrCandidate(cleaned);
+                if (candidate && BASE_M_CODES.has(candidate)) {
+                    if (cleaned !== candidate && candidate === expectedIdCliente) {
+                        saveOcrLearningToFirebase(cleaned, candidate, currentThreshold);
+                    }
+                    if (!paused) {
+                        processFound(candidate);
+                        break;
+                    }
+                }
             }
         } catch (e) {
             console.error(e);
+        } finally {
+            isOcrBusy = false;
         }
     }
- 
-    function triggerLock(msg) {
-        paused = true;
-        stopScanner();
-        logToDB("NG", msg);
-        document.getElementById('lock-msg').innerText = msg;
-        document.getElementById('lock').style.display = 'flex';
+
+    // =========================================================================
+    // 5. VALIDACIÓN POKA-YOKE DE LOS 4 PASOS
+    // =========================================================================
+    function logToDB(status, msg = "") {
+        addDoc(collection(db, "Bitacora_Incidencias"), {
+            usuario: user ? user.nombre : "N/A",
+            status,
+            customer_id: jamaita || "N/A",
+            error_msg: msg,
+            timestamp: serverTimestamp()
+        }).catch(() => {});
     }
- 
+
     async function processFound(val) {
         paused = true;
-        stopScanner();
         const rawVal = val.trim();
+
+        // PASO 1: JAMAITA / SEBANGO (Escáner Superior Zebra)
         if (step === 1) {
             jamaita = rawVal;
-            document.getElementById('res-val').innerText = jamaita;
- 
+            const box1 = document.getElementById('box-step1');
+            box1.innerText = jamaita;
+
             const matchH = sheetData.some(row => row[7] && row[7].trim() === jamaita);
             if (matchH) {
+                box1.className = "input-box valid-step";
                 document.getElementById('btn-res').style.display = 'block';
                 logToDB("OK", "Paso 1: Jamaita QR Detectada");
             } else {
-                retryCount++;
-                updateRetryUI();
-                if (retryCount >= 5) triggerLock("SEBANGO NO ENCONTRADO EN BD");
-                else {
-                    showStatusMsg("Sebango no registrado. Reintentando...");
-                    setTimeout(resumeScanning, 1500);
-                }
+                handleStepFailure("SEBANGO NO ENCONTRADO EN BD", "Sebango no registrado. Reintentando...");
             }
-        } else if (step === 2) {
+        }
+
+        // PASO 2: KANBAN (Escáner Superior Zebra)
+        else if (step === 2) {
             const parts = rawVal.split('-');
             let parsedPart = rawVal;
- 
+
             if (parts.length >= 4) {
                 parsedPart = parts.slice(1, -1).join('-');
             } else if (parts.length === 3) {
@@ -336,98 +1044,116 @@
             } else if (rawVal.includes('-')) {
                 parsedPart = rawVal.substring(rawVal.indexOf('-') + 1).trim();
             }
- 
+
             kanbanParte = parsedPart;
-            document.getElementById('res-val').innerText = kanbanParte;
- 
-            const matchHJ = sheetData.some(row => {
+            const box2 = document.getElementById('box-step2');
+            box2.innerText = kanbanParte;
+
+            const matchedRow = sheetData.find(row => {
                 const cellH = row[7] ? row[7].trim() : '';
                 const cellJ = row[9] ? row[9].trim() : '';
                 return cellH === jamaita && cellJ === kanbanParte;
             });
- 
-            if (matchHJ) {
+
+            if (matchedRow) {
+                expectedIdCliente = matchedRow[8] ? matchedRow[8].trim().toUpperCase() : '';
+                box2.className = "input-box valid-step";
                 document.getElementById('btn-res').style.display = 'block';
                 logToDB("OK", "Paso 2: Kanban Parte OK");
             } else {
-                retryCount++;
-                updateRetryUI();
-                if (retryCount >= 5) triggerLock("MEZCLA DE PARTE / SEBANGO");
-                else {
-                    showStatusMsg("Número de Parte no coincide con Sebango. Reintentando...");
-                    setTimeout(resumeScanning, 1500);
-                }
+                handleStepFailure("MEZCLA DE PARTE / SEBANGO", "Número de Parte no coincide con Sebango. Reintentando...");
             }
-        } else if (step === 3) {
-            idCliente = rawVal;
-            document.getElementById('res-val').innerText = idCliente;
- 
+        }
+
+        // PASO 3: ID CLIENTE MXXX (Cámara Trasera OCR)
+        else if (step === 3) {
+            idCliente = rawVal.toUpperCase();
+            const box3 = document.getElementById('box-step3');
+            box3.innerText = idCliente;
+
             const validRow = sheetData.find(row => {
                 const cellH = row[7] ? row[7].trim() : '';
-                const cellI = row[8] ? row[8].trim() : '';
+                const cellI = row[8] ? row[8].trim().toUpperCase() : '';
                 const cellJ = row[9] ? row[9].trim() : '';
                 return cellH === jamaita && cellJ === kanbanParte && cellI === idCliente;
             });
- 
+
             if (validRow) {
+                stopCameraOCR();
+                box3.className = "input-box valid-step";
                 document.getElementById('btn-res').style.display = 'block';
+
                 getDoc(doc(db, "Maestro_Partes", idCliente))
                     .then(s => { pendingData = s.exists() ? s.data() : {}; })
-                    .catch(e => console.error(e));
+                    .catch(() => { pendingData = {}; });
+
                 logToDB("OK", "Paso 3: ID Cliente OK");
             } else {
-                retryCount++;
-                updateRetryUI();
-                if (retryCount >= 5) triggerLock("ID CLIENTE INCORRECTO");
-                else {
-                    showStatusMsg("ID Cliente no coincide con Registro. Reintentando...");
-                    setTimeout(resumeScanning, 1500);
-                }
+                handleStepFailure("ID CLIENTE INCORRECTO", "ID Cliente no coincide con Registro. Reintentando...");
             }
         }
     }
- 
-    window.goNext = () => {
-        if(step === 3) {
+
+    function goNext() {
+        if (step === 3) {
             initStep4(pendingData || {});
             return;
         }
-        step++; 
+
+        step++;
+        paused = false;
         document.getElementById('btn-res').style.display = 'none';
-        document.getElementById('res-val').innerText = "---";
-        const t = document.getElementById('step-txt');
-        if(step === 2) t.innerText = "PASO 2: KANBAN";
-        if(step === 3) t.innerText = "PASO 3: ID CLIENTE";
-        resumeScanning();
-    };
- 
+
+        const stepTxt = document.getElementById('step-txt');
+        const stepMode = document.getElementById('step-mode');
+
+        if (step === 2) {
+            stepTxt.innerText = "PASO 2: KANBAN";
+            stepMode.innerText = "LÁSER SUPERIOR";
+            document.getElementById('box-step2').className = "input-box active-laser";
+            focusHardwareScanner();
+        } else if (step === 3) {
+            stepTxt.innerText = "PASO 3: ID CLIENTE (MXXX)";
+            stepMode.innerText = "CÁMARA OCR";
+            document.getElementById('box-step3').className = "input-box active-ocr";
+            document.getElementById('expected-hint').innerText = expectedIdCliente ? `ESPERADO: ${expectedIdCliente}` : "";
+            startCameraOCR();
+        }
+    }
+
     function initStep4(data) {
         step = 4;
         paused = true;
-        stopScanner();
+        stopCameraOCR();
+
         document.getElementById('step-txt').innerText = "PASO 4: TEKIN VISUAL";
+        document.getElementById('step-mode').innerText = "VERIFICACIÓN";
         document.getElementById('controls-standard').style.display = 'none';
-        document.getElementById('step4-container').style.display = 'block';
+        document.getElementById('step4-container').style.display = 'flex';
+
         const img = document.getElementById('img-tekin');
-        if(data && data.img_url) { 
-            img.src = data.img_url; 
-            img.style.display = 'block'; 
+        if (data && data.img_url) {
+            img.src = data.img_url;
+            img.style.display = 'block';
         } else {
             img.style.display = 'none';
         }
-        t_ok = (data && data.Tekin_OK) || "Correcto";
-        let t_ng = (data && data.Tekin_NG) || "Incorrecto";
+
+        const t_ok = (data && data.Tekin_OK) || "Correcto";
+        const t_ng = (data && data.Tekin_NG) || "Incorrecto";
         const opts = [t_ok, t_ng].sort(() => Math.random() - 0.5);
+
         const area = document.getElementById('options-area');
         area.innerHTML = "";
         opts.forEach(o => {
             const b = document.createElement('button');
+            b.type = "button";
             b.className = "option-btn";
             b.innerText = o;
             b.onclick = () => {
-                if(o === t_ok) {
-                    area.innerHTML = "<p style='color:green; font-weight:bold; text-align:center;'>✅ VALIDADO CORRECTAMENTE</p>";
-                    document.getElementById('btn-finish').style.display = 'block';
+                if (o === t_ok) {
+                    area.innerHTML = "<div style='grid-column:span 2; color:var(--green-ok); font-weight:800; text-align:center; padding:12px; background:var(--bg-input); border-radius:6px; border:1px solid var(--green-ok);'>VALIDADO CORRECTAMENTE</div>";
+                    document.getElementById('controls-finish').style.display = 'grid';
                     logToDB("OK", "Paso 4: Tekin Verificado");
                 } else {
                     triggerLock("ERROR SELECCIÓN TEKIN");
@@ -436,225 +1162,22 @@
             area.appendChild(b);
         });
     }
- 
-    window.resetToStepOne = () => {
-        step = 1; 
-        jamaita = ""; 
-        kanbanParte = ""; 
-        idCliente = ""; 
-        retryCount = 0; 
-        pendingData = null;
-        document.getElementById('step4-container').style.display = 'none';
-        document.getElementById('controls-standard').style.display = 'block';
-        document.getElementById('btn-finish').style.display = 'none';
-        document.getElementById('btn-res').style.display = 'none';
-        document.getElementById('retry-counter').innerText = "Intentos de error: 0/5";
-        document.getElementById('step-txt').innerText = "PASO 1: JAMAITA";
-        document.getElementById('res-val').innerText = "---";
-        resumeScanning();
-    };
- 
-    window.unlock = async () => {
-        const p = document.getElementById('pin-tl').value;
-        const q = query(collection(db, "Usuarios"), where("nivel", "==", "Lider"), where("pin", "==", p));
-        const s = await getDocs(q);
-        if(!s.empty) {
-            document.getElementById('lock').style.display = 'none';
-            document.getElementById('pin-tl').value = "";
-            resetToStepOne();
-        }
-    };
-</script>
-</body>
-</html><!DOCTYPE html>
-<html lang="es">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>KTMEX Poka-Yoke V4.9 iOS Fix</title>
-<script src="https://cdn.jsdelivr.net/npm/tesseract.js@4/dist/tesseract.min.js"></script>
-<script src="https://unpkg.com/@zxing/library@latest"></script>
-<style>
-        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; margin: 0; background: #000; color: white; overflow: hidden; }
-        video { width: 100%; height: 40%; object-fit: cover; background: #111; display: block; }
-        .panel { position: fixed; bottom: 0; width: 100%; height: 60%; background: white; color: #333; border-radius: 25px 25px 0 0; padding: 20px; box-sizing: border-box; overflow-y: auto; }
-        .btn-main { background: #1a1c2c; color: white; border: none; padding: 15px; width: 100%; border-radius: 10px; font-weight: bold; font-size: 16px; margin-top: 10px; cursor: pointer; -webkit-tap-highlight-color: transparent; }
-        .btn-flash { position: absolute; top: 10px; right: 10px; background: rgba(0,0,0,0.6); color: white; border: 1px solid white; padding: 12px; border-radius: 50%; z-index: 100; font-size: 20px; }
-        #res-val { font-size: 24px; font-weight: 800; color: #e30613; text-align: center; border: 2px dashed #e30613; margin: 10px 0; padding: 10px; background: #fff5f5; border-radius: 10px; min-height: 40px; word-break: break-all; }
-        .img-verify { width: 100%; height: 160px; object-fit: contain; background: #f0f0f0; border-radius: 12px; display: none; margin-bottom: 10px; border: 1px solid #ddd; }
-        .option-btn { background: #f8f9fa; border: 2px solid #dee2e6; color: #333; padding: 15px; width: 100%; border-radius: 8px; margin-bottom: 10px; text-align: center; font-weight: bold; cursor: pointer; font-size: 18px; }
-        .lock-ui { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: #e30613; z-index: 5000; display: none; flex-direction: column; align-items: center; justify-content: center; padding: 20px; text-align: center; }
-        input { width: 85%; padding: 15px; border-radius: 8px; border: 1px solid #ccc; font-size: 18px; text-align: center; margin-bottom: 10px; }
-        #retry-counter { font-size: 13px; color: #666; text-align: center; margin-top: 5px; font-weight: bold; }
-        #msg-pop { color: #e30613; font-weight: bold; text-align: center; display: none; margin-top: 10px; background: #ffebeb; padding: 8px; border-radius: 5px; }
-</style>
-</head>
-<body>
- 
-<button class="btn-flash" onclick="toggleFlash()">🔦</button>
-<video id="webcam" autoplay playsinline webkit-playsinline muted></video>
- 
-<div class="panel">
-<div id="ui-login">
-<h2 style="color:#e30613; margin-top:0;">Acceso KTMEX</h2>
-<input type="text" id="nom-input" placeholder="Nómina">
-<div id="pin-box" style="display:none;"><input type="password" id="pin-input" placeholder="PIN Líder"></div>
-<button class="btn-main" onclick="checkLogin()">INGRESAR</button>
-</div>
- 
-    <div id="ui-scan" style="display:none;">
-<div style="display:flex; justify-content: space-between; align-items: center;">
-<h3 id="step-txt" style="margin:0; color:#1a1c2c;">PASO 1: JAMAITA</h3>
-<span id="user-display" style="font-size:10px; color:#999;"></span>
-</div>
-<div id="res-val">---</div>
-<div id="msg-pop"></div>
- 
-        <div id="step4-container" style="display:none;">
-<p style="font-weight:bold; font-size:14px; margin-bottom:5px;">Verificación Visual de Tekin:</p>
-<img id="img-tekin" class="img-verify">
-<div id="options-area" style="display: flex; flex-direction: column;"></div>
-</div>
- 
-        <div id="controls-standard">
-<button id="btn-res" class="btn-main" style="display:none; background:#27ae60;" onclick="goNext()">CONTINUAR</button>
-<button id="btn-retry" class="btn-main" style="background:#f39c12;" onclick="handleRetry()">🔄 REPETIR ESCANEO</button>
-<div id="retry-counter">Intentos de error: 0/5</div>
-</div>
- 
-        <button id="btn-finish" class="btn-main" style="display:none; background:#27ae60;" onclick="resetToStepOne()">✅ FINALIZAR PIEZA</button>
-</div>
-</div>
- 
-<div id="lock" class="lock-ui">
-<h1 style="font-size:50px; margin:0;">🛑</h1>
-<h2 id="lock-msg">BLOQUEO DE SEGURIDAD</h2>
-<p>Exceso de errores o reintentos. Requiere PIN de Líder.</p>
-<input type="password" id="pin-tl" placeholder="PIN LÍDER">
-<button class="btn-main" style="background:white; color:#e30613; width:85%;" onclick="unlock()">DESBLOQUEAR</button>
-</div>
- 
-<script type="module">
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-app.js";
-    import { getFirestore, doc, getDoc, collection, addDoc, serverTimestamp, query, where, getDocs } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-firestore.js";
- 
-    const firebaseConfig = {
-        apiKey: "AIzaSyA6Il03GHS4L_eDY1Kv3fMyF2EwuYLQ5qY",
-        authDomain: "logistica-ktmex.firebaseapp.com",
-        projectId: "logistica-ktmex",
-        storageBucket: "logistica-ktmex.firebasestorage.app",
-        messagingSenderId: "166597623735",
-        appId: "1:166597623735:web:c0f8d372bc1ee12d81b232"
-    };
- 
-    const app = initializeApp(firebaseConfig);
-    const db = getFirestore(app);
- 
-    const SHEET_CSV_URL = "https://docs.google.com/spreadsheets/d/1GkWY2r-kz_wfv_-LPEeFEdKe1qNILTV86pln2xg_rIM/gviz/tq?tqx=out:csv%22;
- 
-    let user = null; 
-    let step = 1; 
-    let jamaita = ""; 
-    let kanbanParte = ""; 
-    let idCliente = ""; 
-    let paused = false; 
-    let track = null;
-    let t_ok = ""; 
-    let retryCount = 0; 
-    let pendingData = null;
-    let codeReader = null;
-    let selectedDeviceId = null;
-    let sheetData = [];
-    let ocrTimer = null;
- 
-    async function loadSheetData() {
-        try {
-            const response = await fetch(SHEET_CSV_URL);
-            const data = await response.text();
-            sheetData = parseCSV(data);
-        } catch (e) {
-            console.error(e);
+
+    // =========================================================================
+    // 6. REINTENTOS Y DESBLOQUEO DE LÍDER
+    // =========================================================================
+    function handleStepFailure(lockReason, statusText) {
+        retryCount++;
+        updateRetryUI();
+        if (retryCount >= 5) {
+            triggerLock(lockReason);
+        } else {
+            showStatusMsg(statusText);
+            setTimeout(resumeScanning, 1400);
         }
     }
- 
-    function parseCSV(text) {
-        const lines = text.split(/\r\n|\n/);
-        return lines.map(line => {
-            const result = [];
-            let cell = '';
-            let inQuotes = false;
-            for (let i = 0; i < line.length; i++) {
-                const char = line[i];
-                if (char === '"') {
-                    inQuotes = !inQuotes;
-                } else if (char === ',' && !inQuotes) {
-                    result.push(cell.trim().replace(/^"|"$/g, ''));
-                    cell = '';
-                } else {
-                    cell += char;
-                }
-            }
-            result.push(cell.trim().replace(/^"|"$/g, ''));
-            return result;
-        });
-    }
- 
-    window.toggleFlash = async () => {
-        if (!track) return;
-        try {
-            const caps = track.getCapabilities();
-            if (caps.torch) {
-                const s = track.getSettings();
-                await track.applyConstraints({ advanced: [{ torch: !s.torch }] });
-            }
-        } catch(e) {}
-    };
- 
-    window.checkLogin = async () => {
-        const nom = document.getElementById('nom-input').value;
-        const pin = document.getElementById('pin-input').value;
-        const s = await getDoc(doc(db, "Usuarios", nom));
-        if(!s.exists()) return;
-        const u = s.data();
-        if(u.nivel === "Operador") start(u);
-        else {
-            document.getElementById('pin-box').style.display = 'block';
-            if(pin === u.pin) start(u);
-        }
-    };
- 
-    async function start(u) {
-        user = u;
-        document.getElementById('user-display').innerText = u.nombre;
-        document.getElementById('ui-login').style.display = 'none';
-        document.getElementById('ui-scan').style.display = 'block';
-        await loadSheetData();
- 
-        codeReader = new ZXing.BrowserMultiFormatReader();
- 
-        try {
-            const videoInputDevices = await codeReader.listVideoInputDevices();
-            const backCamera = videoInputDevices.find(device => 
-                device.label.toLowerCase().includes('back') || 
-                device.label.toLowerCase().includes('trasera') || 
-                device.label.toLowerCase().includes('environment')
-            );
- 
-            selectedDeviceId = backCamera ? backCamera.deviceId : videoInputDevices[0]?.deviceId;
- 
-            startScanner();
-        } catch(err) {
-            alert("No se pudo obtener la lista de cámaras o autorizar permisos en Safari.");
-        }
-    }
- 
-    async function logToDB(status, msg = "") {
-        await addDoc(collection(db, "Bitacora_Incidencias"), {
-            usuario: user.nombre, status, customer_id: jamaita || "N/A", error_msg: msg, timestamp: serverTimestamp()
-        });
-    }
- 
-    window.handleRetry = () => {
+
+    function handleRetry() {
         retryCount++;
         updateRetryUI();
         if (retryCount >= 5) {
@@ -662,276 +1185,110 @@
         } else {
             resumeScanning();
         }
-    };
- 
-    function updateRetryUI() {
-        document.getElementById('retry-counter').innerText = `Intentos de error: ${retryCount}/5`;
     }
- 
+
+    function updateRetryUI() {
+        document.getElementById('retry-counter').innerText = `ERR: ${retryCount}/5`;
+    }
+
     function showStatusMsg(txt) {
         const el = document.getElementById('msg-pop');
         el.innerText = txt;
         el.style.display = 'block';
         setTimeout(() => { el.style.display = 'none'; }, 2000);
     }
- 
-    function stopScanner() {
-        if (codeReader) {
-            try { codeReader.reset(); } catch(e) {}
-        }
-        if (ocrTimer) {
-            clearInterval(ocrTimer);
-            ocrTimer = null;
-        }
-    }
- 
+
     function resumeScanning() {
         paused = false;
         document.getElementById('btn-res').style.display = 'none';
-        document.getElementById('res-val').innerText = "---";
-        startScanner();
-    }
- 
-    function startScanner() {
-        stopScanner();
-        paused = false;
- 
-        if (step === 1 || step === 2) {
-            codeReader.decodeFromVideoDevice(selectedDeviceId, 'webcam', (result, err) => {
-                if (result && !paused) {
-                    processFound(result.getText());
-                }
-            }).catch(err => console.error(err));
+        if (step === 1) {
+            document.getElementById('box-step1').innerText = "---";
+            focusHardwareScanner();
+        } else if (step === 2) {
+            document.getElementById('box-step2').innerText = "---";
+            focusHardwareScanner();
         } else if (step === 3) {
-            navigator.mediaDevices.getUserMedia({
-                video: { deviceId: selectedDeviceId ? { exact: selectedDeviceId } : undefined, facingMode: "environment" }
-            }).then(stream => {
-                const videoElem = document.getElementById('webcam');
-                track = stream.getVideoTracks()[0];
-                videoElem.srcObject = stream;
-                videoElem.play();
-                ocrTimer = setInterval(runOCR, 1000);
-            });
+            document.getElementById('box-step3').innerText = "---";
         }
     }
- 
-    async function runOCR() {
-        if (paused || step !== 3) return;
-        const videoElem = document.getElementById('webcam');
-        if (!videoElem.videoWidth) return;
- 
-        try {
-            const c = document.createElement('canvas');
-            const scale = 640 / videoElem.videoWidth;
-            c.width = 640;
-            c.height = videoElem.videoHeight * scale;
-            const ctx = c.getContext('2d');
-            ctx.drawImage(videoElem, 0, 0, c.width, c.height);
- 
-            const imgData = ctx.getImageData(0, 0, c.width, c.height);
-            const data = imgData.data;
-            const threshold = 120;
- 
-            for (let i = 0; i < data.length; i += 4) {
-                const avg = (data[i] + data[i + 1] + data[i + 2]) / 3;
-                const color = avg < threshold ? 0 : 255;
-                data[i] = color;
-                data[i + 1] = color;
-                data[i + 2] = color;
-            }
-            ctx.putImageData(imgData, 0, 0);
- 
-            const { data: { text } } = await Tesseract.recognize(c, 'eng', {
-                tessedit_char_whitelist: 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789',
-                tessedit_pageseg_mode: '6'
-            });
- 
-            const raw = text.toUpperCase().split(/[\s\n]+/);
-            let fm = null;
-            for (let w of raw) {
-                const p = w.replace(/[^A-Z0-9]/g, '');
-                if (p.match(/^M\d{3,8}$/)) {
-                    fm = p;
-                    break;
-                }
-            }
- 
-            if (fm && !paused) {
-                processFound(fm);
-            }
-        } catch (e) {
-            console.error(e);
-        }
-    }
- 
+
     function triggerLock(msg) {
         paused = true;
-        stopScanner();
+        stopCameraOCR();
         logToDB("NG", msg);
         document.getElementById('lock-msg').innerText = msg;
         document.getElementById('lock').style.display = 'flex';
+        document.getElementById('pin-tl').focus();
     }
- 
-    async function processFound(val) {
-        paused = true;
-        stopScanner();
-        const rawVal = val.trim();
-        if (step === 1) {
-            jamaita = rawVal;
-            document.getElementById('res-val').innerText = jamaita;
- 
-            const matchH = sheetData.some(row => row[7] && row[7].trim() === jamaita);
-            if (matchH) {
-                document.getElementById('btn-res').style.display = 'block';
-                logToDB("OK", "Paso 1: Jamaita QR Detectada");
-            } else {
-                retryCount++;
-                updateRetryUI();
-                if (retryCount >= 5) triggerLock("SEBANGO NO ENCONTRADO EN BD");
-                else {
-                    showStatusMsg("Sebango no registrado. Reintentando...");
-                    setTimeout(resumeScanning, 1500);
-                }
-            }
-        } else if (step === 2) {
-            const parts = rawVal.split('-');
-            let parsedPart = rawVal;
- 
-            if (parts.length >= 4) {
-                parsedPart = parts.slice(1, -1).join('-');
-            } else if (parts.length === 3) {
-                parsedPart = parts[1];
-            } else if (rawVal.includes('-')) {
-                parsedPart = rawVal.substring(rawVal.indexOf('-') + 1).trim();
-            }
- 
-            kanbanParte = parsedPart;
-            document.getElementById('res-val').innerText = kanbanParte;
- 
-            const matchHJ = sheetData.some(row => {
-                const cellH = row[7] ? row[7].trim() : '';
-                const cellJ = row[9] ? row[9].trim() : '';
-                return cellH === jamaita && cellJ === kanbanParte;
-            });
- 
-            if (matchHJ) {
-                document.getElementById('btn-res').style.display = 'block';
-                logToDB("OK", "Paso 2: Kanban Parte OK");
-            } else {
-                retryCount++;
-                updateRetryUI();
-                if (retryCount >= 5) triggerLock("MEZCLA DE PARTE / SEBANGO");
-                else {
-                    showStatusMsg("Número de Parte no coincide con Sebango. Reintentando...");
-                    setTimeout(resumeScanning, 1500);
-                }
-            }
-        } else if (step === 3) {
-            idCliente = rawVal;
-            document.getElementById('res-val').innerText = idCliente;
- 
-            const validRow = sheetData.find(row => {
-                const cellH = row[7] ? row[7].trim() : '';
-                const cellI = row[8] ? row[8].trim() : '';
-                const cellJ = row[9] ? row[9].trim() : '';
-                return cellH === jamaita && cellJ === kanbanParte && cellI === idCliente;
-            });
- 
-            if (validRow) {
-                document.getElementById('btn-res').style.display = 'block';
-                getDoc(doc(db, "Maestro_Partes", idCliente))
-                    .then(s => { pendingData = s.exists() ? s.data() : {}; })
-                    .catch(e => console.error(e));
-                logToDB("OK", "Paso 3: ID Cliente OK");
-            } else {
-                retryCount++;
-                updateRetryUI();
-                if (retryCount >= 5) triggerLock("ID CLIENTE INCORRECTO");
-                else {
-                    showStatusMsg("ID Cliente no coincide con Registro. Reintentando...");
-                    setTimeout(resumeScanning, 1500);
-                }
-            }
+
+    async function unlock() {
+        const p = document.getElementById('pin-tl').value.trim();
+        if (!p) return;
+
+        let valid = Object.values(usersCache).some(u =>
+            String(u.nivel || "").trim().toLowerCase() === "lider" &&
+            String(u.pin || "").trim() === p
+        );
+
+        if (!valid) {
+            try {
+                const q = query(collection(db, "Usuarios"), where("nivel", "==", "Lider"), where("pin", "==", p));
+                const s = await getDocs(q);
+                valid = !s.empty;
+            } catch (e) {}
         }
-    }
- 
-    window.goNext = () => {
-        if(step === 3) {
-            initStep4(pendingData || {});
-            return;
-        }
-        step++; 
-        document.getElementById('btn-res').style.display = 'none';
-        document.getElementById('res-val').innerText = "---";
-        const t = document.getElementById('step-txt');
-        if(step === 2) t.innerText = "PASO 2: KANBAN";
-        if(step === 3) t.innerText = "PASO 3: ID CLIENTE";
-        resumeScanning();
-    };
- 
-    function initStep4(data) {
-        step = 4;
-        paused = true;
-        stopScanner();
-        document.getElementById('step-txt').innerText = "PASO 4: TEKIN VISUAL";
-        document.getElementById('controls-standard').style.display = 'none';
-        document.getElementById('step4-container').style.display = 'block';
-        const img = document.getElementById('img-tekin');
-        if(data && data.img_url) { 
-            img.src = data.img_url; 
-            img.style.display = 'block'; 
-        } else {
-            img.style.display = 'none';
-        }
-        t_ok = (data && data.Tekin_OK) || "Correcto";
-        let t_ng = (data && data.Tekin_NG) || "Incorrecto";
-        const opts = [t_ok, t_ng].sort(() => Math.random() - 0.5);
-        const area = document.getElementById('options-area');
-        area.innerHTML = "";
-        opts.forEach(o => {
-            const b = document.createElement('button');
-            b.className = "option-btn";
-            b.innerText = o;
-            b.onclick = () => {
-                if(o === t_ok) {
-                    area.innerHTML = "<p style='color:green; font-weight:bold; text-align:center;'>✅ VALIDADO CORRECTAMENTE</p>";
-                    document.getElementById('btn-finish').style.display = 'block';
-                    logToDB("OK", "Paso 4: Tekin Verificado");
-                } else {
-                    triggerLock("ERROR SELECCIÓN TEKIN");
-                }
-            };
-            area.appendChild(b);
-        });
-    }
- 
-    window.resetToStepOne = () => {
-        step = 1; 
-        jamaita = ""; 
-        kanbanParte = ""; 
-        idCliente = ""; 
-        retryCount = 0; 
-        pendingData = null;
-        document.getElementById('step4-container').style.display = 'none';
-        document.getElementById('controls-standard').style.display = 'block';
-        document.getElementById('btn-finish').style.display = 'none';
-        document.getElementById('btn-res').style.display = 'none';
-        document.getElementById('retry-counter').innerText = "Intentos de error: 0/5";
-        document.getElementById('step-txt').innerText = "PASO 1: JAMAITA";
-        document.getElementById('res-val').innerText = "---";
-        resumeScanning();
-    };
- 
-    window.unlock = async () => {
-        const p = document.getElementById('pin-tl').value;
-        const q = query(collection(db, "Usuarios"), where("nivel", "==", "Lider"), where("pin", "==", p));
-        const s = await getDocs(q);
-        if(!s.empty) {
+
+        if (valid) {
             document.getElementById('lock').style.display = 'none';
             document.getElementById('pin-tl').value = "";
             resetToStepOne();
+        } else {
+            document.getElementById('lock-msg').innerText = "PIN DE LÍDER INCORRECTO";
         }
-    };
+    }
+
+    function resetToStepOne() {
+        stopCameraOCR();
+        step = 1;
+        jamaita = "";
+        kanbanParte = "";
+        idCliente = "";
+        expectedIdCliente = "";
+        pendingData = null;
+        retryCount = 0;
+        paused = false;
+
+        document.getElementById('step-txt').innerText = "PASO 1: JAMAITA (SEBANGO)";
+        document.getElementById('step-mode').innerText = "LÁSER SUPERIOR";
+        document.getElementById('expected-hint').innerText = "";
+
+        const b1 = document.getElementById('box-step1');
+        const b2 = document.getElementById('box-step2');
+        const b3 = document.getElementById('box-step3');
+        b1.innerText = "---"; b1.className = "input-box active-laser";
+        b2.innerText = "---"; b2.className = "input-box";
+        b3.innerText = "---"; b3.className = "input-box";
+
+        document.getElementById('step4-container').style.display = 'none';
+        document.getElementById('controls-finish').style.display = 'none';
+        document.getElementById('controls-standard').style.display = 'grid';
+        document.getElementById('btn-res').style.display = 'none';
+        updateRetryUI();
+        focusHardwareScanner();
+    }
+
+    // Asignación directa de eventos para garantizar funcionamiento en cualquier WebView
+    document.getElementById('btn-login').addEventListener('click', checkLogin);
+    document.getElementById('header-badge').addEventListener('click', toggleManualKeyboard);
+    document.getElementById('btn-res').addEventListener('click', goNext);
+    document.getElementById('btn-retry').addEventListener('click', handleRetry);
+    document.getElementById('btn-train').addEventListener('click', trainCurrentOCR);
+    document.getElementById('btn-reset').addEventListener('click', resetToStepOne);
+    document.getElementById('btn-finish').addEventListener('click', resetToStepOne);
+    document.getElementById('btn-unlock').addEventListener('click', unlock);
+    document.getElementById('btn-flash').addEventListener('click', toggleFlash);
+
+    initBackgroundResources();
 </script>
 </body>
 </html>
